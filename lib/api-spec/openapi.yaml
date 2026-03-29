@@ -1,0 +1,1262 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Reimbursement Management System API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: companies
+    description: Company management
+  - name: users
+    description: User management
+  - name: expenses
+    description: Expense management
+  - name: approvals
+    description: Approval operations
+  - name: approval-rules
+    description: Approval rule configuration
+  - name: currencies
+    description: Currency and exchange rate operations
+  - name: ocr
+    description: OCR receipt scanning
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/signup:
+    post:
+      operationId: signup
+      tags: [auth]
+      summary: Register new company and admin user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: Company and admin created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login and get JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserWithCompany"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /companies/{id}/currency:
+    patch:
+      operationId: updateCompanyCurrency
+      tags: [companies]
+      summary: Update company default currency
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCurrencyRequest"
+      responses:
+        "200":
+          description: Currency updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users:
+    get:
+      operationId: getUsers
+      tags: [users]
+      summary: Get all users in company (admin only)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a new user (admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{id}:
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user role or manager (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /expenses:
+    get:
+      operationId: getExpenses
+      tags: [expenses]
+      summary: Get expenses (filtered by role)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpenseWithDetails"
+    post:
+      operationId: createExpense
+      tags: [expenses]
+      summary: Submit a new expense
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExpenseRequest"
+      responses:
+        "201":
+          description: Expense submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseWithDetails"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /expenses/{id}:
+    get:
+      operationId: getExpense
+      tags: [expenses]
+      summary: Get expense detail
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Expense detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseWithDetails"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /expenses/{id}/approve:
+    post:
+      operationId: approveExpense
+      tags: [approvals]
+      summary: Approve or reject an expense
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalActionRequest"
+      responses:
+        "200":
+          description: Approval action taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseWithDetails"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized to approve
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /expenses/{id}/override:
+    post:
+      operationId: overrideExpense
+      tags: [approvals]
+      summary: Admin override approval
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OverrideRequest"
+      responses:
+        "200":
+          description: Override applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseWithDetails"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /approval-rules:
+    get:
+      operationId: getApprovalRules
+      tags: [approval-rules]
+      summary: Get approval rules for company
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Approval rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApprovalRuleWithSteps"
+    post:
+      operationId: createApprovalRule
+      tags: [approval-rules]
+      summary: Create approval rule (admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApprovalRuleRequest"
+      responses:
+        "201":
+          description: Rule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalRuleWithSteps"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /approval-rules/{id}:
+    put:
+      operationId: updateApprovalRule
+      tags: [approval-rules]
+      summary: Update approval rule (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApprovalRuleRequest"
+      responses:
+        "200":
+          description: Rule updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalRuleWithSteps"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteApprovalRule
+      tags: [approval-rules]
+      summary: Delete approval rule (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Rule deleted
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /currencies:
+    get:
+      operationId: getCurrencies
+      tags: [currencies]
+      summary: Get list of world currencies from countries API
+      responses:
+        "200":
+          description: List of currencies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CurrencyInfo"
+
+  /currencies/rates/{base}:
+    get:
+      operationId: getExchangeRates
+      tags: [currencies]
+      summary: Get exchange rates for a base currency
+      parameters:
+        - name: base
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Exchange rates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeRates"
+
+  /currencies/convert:
+    post:
+      operationId: convertCurrency
+      tags: [currencies]
+      summary: Convert amount between currencies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvertCurrencyRequest"
+      responses:
+        "200":
+          description: Converted amount
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvertCurrencyResponse"
+
+  /ocr/scan:
+    post:
+      operationId: scanReceipt
+      tags: [ocr]
+      summary: Scan receipt image and extract fields
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScanReceiptRequest"
+      responses:
+        "200":
+          description: Extracted receipt data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanReceiptResponse"
+
+  /upload/receipt:
+    post:
+      operationId: uploadReceipt
+      tags: [expenses]
+      summary: Upload receipt image (base64)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadReceiptRequest"
+      responses:
+        "200":
+          description: Receipt uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadReceiptResponse"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [expenses]
+      summary: Get dashboard statistics
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SignupRequest:
+      type: object
+      properties:
+        companyName:
+          type: string
+        country:
+          type: string
+        currency:
+          type: string
+        adminName:
+          type: string
+        adminEmail:
+          type: string
+        adminPassword:
+          type: string
+      required:
+        - companyName
+        - country
+        - currency
+        - adminName
+        - adminEmail
+        - adminPassword
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserWithCompany"
+      required:
+        - token
+        - user
+
+    Company:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        country:
+          type: string
+        defaultCurrency:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - country
+        - defaultCurrency
+        - createdAt
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, employee]
+        managerId:
+          type: ["integer", "null"]
+        companyId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - role
+        - companyId
+        - createdAt
+
+    UserWithCompany:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, employee]
+        managerId:
+          type: ["integer", "null"]
+        companyId:
+          type: integer
+        company:
+          $ref: "#/components/schemas/Company"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - role
+        - companyId
+        - company
+        - createdAt
+
+    CreateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [manager, employee]
+        managerId:
+          type: ["integer", "null"]
+      required:
+        - name
+        - email
+        - password
+        - role
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, employee]
+        managerId:
+          type: ["integer", "null"]
+
+    UpdateCurrencyRequest:
+      type: object
+      properties:
+        currency:
+          type: string
+      required:
+        - currency
+
+    Expense:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        amount:
+          type: number
+        currency:
+          type: string
+        convertedAmount:
+          type: ["number", "null"]
+        category:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        receiptUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        currentStep:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - amount
+        - currency
+        - category
+        - description
+        - date
+        - status
+        - createdAt
+
+    ExpenseWithDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        amount:
+          type: number
+        currency:
+          type: string
+        convertedAmount:
+          type: ["number", "null"]
+        category:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        receiptUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        currentStep:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/User"
+        approvals:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApprovalWithApprover"
+      required:
+        - id
+        - userId
+        - amount
+        - currency
+        - category
+        - description
+        - date
+        - status
+        - createdAt
+        - user
+        - approvals
+
+    CreateExpenseRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+        currency:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        receiptUrl:
+          type: ["string", "null"]
+      required:
+        - amount
+        - currency
+        - category
+        - description
+        - date
+
+    ApprovalActionRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [approved, rejected]
+        comments:
+          type: string
+      required:
+        - action
+
+    OverrideRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+        comments:
+          type: string
+      required:
+        - status
+
+    Approval:
+      type: object
+      properties:
+        id:
+          type: integer
+        expenseId:
+          type: integer
+        approverId:
+          type: integer
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        comments:
+          type: ["string", "null"]
+        stepOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - expenseId
+        - approverId
+        - status
+        - stepOrder
+        - createdAt
+        - updatedAt
+
+    ApprovalWithApprover:
+      type: object
+      properties:
+        id:
+          type: integer
+        expenseId:
+          type: integer
+        approverId:
+          type: integer
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        comments:
+          type: ["string", "null"]
+        stepOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        approver:
+          $ref: "#/components/schemas/User"
+      required:
+        - id
+        - expenseId
+        - approverId
+        - status
+        - stepOrder
+        - createdAt
+        - updatedAt
+        - approver
+
+    ApprovalRule:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        ruleType:
+          type: string
+          enum: [percentage, specific, hybrid]
+        threshold:
+          type: ["number", "null"]
+        specificApproverId:
+          type: ["integer", "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - companyId
+        - ruleType
+        - isActive
+        - createdAt
+
+    ApprovalStep:
+      type: object
+      properties:
+        id:
+          type: integer
+        ruleId:
+          type: integer
+        approverRole:
+          type: string
+          enum: [manager, admin, employee]
+        approverId:
+          type: ["integer", "null"]
+        stepOrder:
+          type: integer
+      required:
+        - id
+        - ruleId
+        - approverRole
+        - stepOrder
+
+    ApprovalRuleWithSteps:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        ruleType:
+          type: string
+          enum: [percentage, specific, hybrid]
+        threshold:
+          type: ["number", "null"]
+        specificApproverId:
+          type: ["integer", "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApprovalStep"
+      required:
+        - id
+        - companyId
+        - ruleType
+        - isActive
+        - createdAt
+        - steps
+
+    CreateApprovalRuleRequest:
+      type: object
+      properties:
+        ruleType:
+          type: string
+          enum: [percentage, specific, hybrid]
+        threshold:
+          type: ["number", "null"]
+        specificApproverId:
+          type: ["integer", "null"]
+        isActive:
+          type: boolean
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateApprovalStepRequest"
+      required:
+        - ruleType
+        - isActive
+        - steps
+
+    CreateApprovalStepRequest:
+      type: object
+      properties:
+        approverRole:
+          type: string
+          enum: [manager, admin, employee]
+        approverId:
+          type: ["integer", "null"]
+        stepOrder:
+          type: integer
+      required:
+        - approverRole
+        - stepOrder
+
+    CurrencyInfo:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        symbol:
+          type: string
+      required:
+        - code
+        - name
+        - symbol
+
+    ExchangeRates:
+      type: object
+      properties:
+        base:
+          type: string
+        rates:
+          type: object
+          additionalProperties:
+            type: number
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - base
+        - rates
+        - updatedAt
+
+    ConvertCurrencyRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+        fromCurrency:
+          type: string
+        toCurrency:
+          type: string
+      required:
+        - amount
+        - fromCurrency
+        - toCurrency
+
+    ConvertCurrencyResponse:
+      type: object
+      properties:
+        amount:
+          type: number
+        fromCurrency:
+          type: string
+        toCurrency:
+          type: string
+        convertedAmount:
+          type: number
+        rate:
+          type: number
+      required:
+        - amount
+        - fromCurrency
+        - toCurrency
+        - convertedAmount
+        - rate
+
+    ScanReceiptRequest:
+      type: object
+      properties:
+        imageBase64:
+          type: string
+        mimeType:
+          type: string
+      required:
+        - imageBase64
+
+    ScanReceiptResponse:
+      type: object
+      properties:
+        amount:
+          type: ["number", "null"]
+        date:
+          type: ["string", "null"]
+        vendor:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        currency:
+          type: ["string", "null"]
+        rawText:
+          type: string
+      required:
+        - rawText
+
+    UploadReceiptRequest:
+      type: object
+      properties:
+        imageBase64:
+          type: string
+        fileName:
+          type: string
+        mimeType:
+          type: string
+      required:
+        - imageBase64
+        - fileName
+
+    UploadReceiptResponse:
+      type: object
+      properties:
+        url:
+          type: string
+      required:
+        - url
+
+    DashboardStats:
+      type: object
+      properties:
+        totalExpenses:
+          type: integer
+        pendingExpenses:
+          type: integer
+        approvedExpenses:
+          type: integer
+        rejectedExpenses:
+          type: integer
+        totalAmount:
+          type: number
+        pendingAmount:
+          type: number
+        approvedAmount:
+          type: number
+        teamExpenses:
+          type: integer
+        recentExpenses:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpenseWithDetails"
+      required:
+        - totalExpenses
+        - pendingExpenses
+        - approvedExpenses
+        - rejectedExpenses
+        - totalAmount
+        - pendingAmount
+        - approvedAmount
+        - teamExpenses
+        - recentExpenses

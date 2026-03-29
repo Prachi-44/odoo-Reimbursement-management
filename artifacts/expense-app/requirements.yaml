@@ -1,0 +1,18 @@
+packages:
+  "framer-motion": "For page transitions, smooth enter/exit animations, and interactive elements"
+  "recharts": "For rendering beautiful financial charts on the dashboard"
+  "date-fns": "For elegant date and time formatting"
+  "react-hook-form": "For robust and performant form state management"
+  "@hookform/resolvers": "To integrate Zod validation with React Hook Form"
+
+images:
+  - path: "artifacts/expense-app/public/images/logo.png"
+    description: "Minimal geometric logo mark for an enterprise finance application. Deep indigo and slate blue colors, transparent background."
+    aspect_ratio: "1:1"
+  - path: "artifacts/expense-app/public/images/auth-bg.png"
+    description: "Abstract, sophisticated gradient mesh background in deep indigo and slate blue with soft light leaks and subtle geometric glassmorphism elements. Premium corporate vibe."
+    aspect_ratio: "16:9"
+
+notes:
+  - Custom fetch auth token injection is handled in src/lib/api-setup.ts
+  - Assuming UI components like Card, Button, Input exist in components/ui or are implemented manually if missing

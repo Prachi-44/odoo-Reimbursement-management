@@ -1,0 +1,338 @@
+You are a senior full-stack software architect, backend engineer, frontend engineer, and AI/ML engineer.
+
+Your task is to design and build a complete enterprise-grade Reimbursement Management System (Expense Management System) from scratch with production-level architecture, clean code, scalability, and modular design.
+
+---
+
+# 🧠 PROJECT OVERVIEW
+
+Build a SaaS-based web application where companies can manage employee expense reimbursements with:
+
+- Multi-level approval workflows
+- Conditional approval rules (percentage, specific approver, hybrid)
+- OCR-based receipt scanning
+- Multi-currency support
+- Role-based access control
+- Admin/Manager/Employee dashboards
+
+This system solves problems like:
+- Manual expense tracking
+- Lack of transparency
+- Delayed approvals
+- Complex approval chains
+
+---
+
+# 👥 USER ROLES
+
+1. Admin
+2. Manager
+3. Employee
+
+---
+
+# 🔐 AUTHENTICATION & COMPANY SETUP
+
+- On signup:
+  - Create Company
+  - Create Admin user
+- Assign company currency dynamically based on country using:
+  https://restcountries.com/v3.1/all?fields=name,currencies
+- Use JWT authentication
+- Password hashing using bcrypt
+
+---
+
+# 👤 USER MANAGEMENT
+
+Admin can:
+- Create users (Employee/Manager)
+- Assign roles
+- Define manager hierarchy
+- Update roles
+- View all users
+
+---
+
+# 💸 EXPENSE SUBMISSION (EMPLOYEE)
+
+Employee can:
+- Submit expense:
+  - Amount (can be different currency than company currency)
+  - Category
+  - Description
+  - Date
+  - Receipt upload
+- View expense history
+- Track status:
+  - Pending
+  - Approved
+  - Rejected
+
+---
+
+# 📸 OCR FEATURE (RECEIPT SCANNING)
+
+- Upload receipt image
+- Use OCR to extract:
+  - Amount
+  - Date
+  - Vendor name
+  - Description
+
+Use:
+- Tesseract OR Google Vision API
+
+Auto-fill form fields after extraction
+
+---
+
+# 🔁 APPROVAL WORKFLOW SYSTEM
+
+Admin defines approval flow:
+
+Example:
+Step 1 → Manager  
+Step 2 → Finance  
+Step 3 → Director  
+
+Rules:
+- Sequential approvals
+- Next approver gets request ONLY after previous approval
+- If rejected → stop workflow
+
+---
+
+# 🧠 CONDITIONAL APPROVAL RULE ENGINE
+
+Support:
+
+1. Percentage Rule:
+   - e.g. 60% approvals → approved
+
+2. Specific Approver Rule:
+   - e.g. CFO approves → auto-approved
+
+3. Hybrid Rule:
+   - e.g. 60% OR CFO approves
+
+Implement logic:
+- Dynamic rule evaluation
+- Configurable rules per company
+
+---
+
+# 📊 MANAGER DASHBOARD
+
+Manager can:
+- View pending approvals
+- Approve / Reject
+- Add comments
+- View team expenses
+
+---
+
+# 🏢 ADMIN DASHBOARD
+
+Admin can:
+- View all expenses
+- Configure approval rules
+- Override approvals
+- Monitor workflows
+
+---
+
+# 💱 CURRENCY SYSTEM
+
+Use:
+https://api.exchangerate-api.com/v4/latest/{BASE_CURRENCY}
+
+Features:
+- Convert expense currency → company currency
+- Show both values
+- Cache API responses for performance
+
+---
+
+# 🗄️ DATABASE DESIGN (POSTGRESQL)
+
+Create tables:
+
+Companies:
+- id, name, country, default_currency
+
+Users:
+- id, name, email, password, role, manager_id, company_id
+
+Expenses:
+- id, user_id, amount, currency, converted_amount, category, description, date, receipt_url, status
+
+Approvals:
+- id, expense_id, approver_id, status, comments, step_order
+
+ApprovalRules:
+- id, company_id, rule_type (percentage/specific/hybrid), threshold
+
+ApprovalSteps:
+- id, rule_id, approver_role, step_order
+
+---
+
+# 🧩 BACKEND REQUIREMENTS
+
+Use:
+- Node.js + Express (preferred) OR Django REST Framework
+
+Features:
+- REST API
+- JWT authentication
+- Role-based middleware
+- Error handling
+- Validation
+
+Structure:
+- Controllers
+- Services
+- Models
+- Routes
+- Middleware
+
+---
+
+# 🎨 FRONTEND REQUIREMENTS
+
+Use:
+- React.js (Vite or Next.js)
+- Tailwind CSS
+
+Pages:
+- Login/Signup
+- Dashboard (based on role)
+- Submit Expense
+- Expense History
+- Approval Panel
+- Admin Settings
+
+State management:
+- Redux Toolkit OR Zustand
+
+API calls:
+- Axios
+
+---
+
+# ☁️ FILE STORAGE
+
+Use:
+- AWS S3 OR Cloudinary
+
+Store:
+- Receipt images
+
+---
+
+# ⚙️ SYSTEM ARCHITECTURE
+
+Frontend (React)
+   ↓
+Backend API (Node/Django)
+   ↓
+Business Logic Layer
+   ↓
+PostgreSQL Database
+
+External Services:
+- OCR API
+- Currency API
+- Country API
+
+---
+
+# 🔗 EXTERNAL APIs (MANDATORY)
+
+1. Country & Currency API:
+https://restcountries.com/v3.1/all?fields=name,currencies
+
+2. Currency Conversion API:
+https://api.exchangerate-api.com/v4/latest/{BASE_CURRENCY}
+
+(These APIs are required as per project specification)
+
+---
+
+# 🔄 WORKFLOW LOGIC
+
+When expense is submitted:
+1. Assign first approver
+2. Create approval record
+3. Wait for action
+4. If approved → move to next step
+5. If rejected → mark expense rejected
+6. Evaluate rules:
+   - Percentage
+   - Specific approver
+   - Hybrid
+
+---
+
+# 🧪 DELIVERABLES REQUIRED
+
+Generate:
+
+1. Complete folder structure
+2. Backend code (modular)
+3. Frontend code (components + pages)
+4. Database schema (SQL)
+5. API endpoints (with request/response)
+6. Workflow engine implementation
+7. OCR integration code
+8. Currency API integration
+9. Sample data
+10. Testing strategy
+
+---
+
+# 🚧 CHALLENGING PARTS (HANDLE CAREFULLY)
+
+1. Approval Workflow Engine
+   - Dynamic steps
+   - Sequential logic
+
+2. Hybrid Rule Logic
+   - (percentage OR specific approver)
+
+3. OCR Extraction
+   - Unstructured data parsing
+
+4. Currency Conversion
+   - Real-time + caching
+
+5. Role-Based Access Control
+   - Secure endpoints
+
+---
+
+# 🧠 CODING STANDARDS
+
+- Use clean architecture
+- Write modular code
+- Add comments
+- Use environment variables
+- Follow best practices
+- Ensure scalability
+
+---
+
+# 🚀 FINAL INSTRUCTION
+
+Build the entire system step-by-step.
+
+Start with:
+1. Project setup
+2. Database schema
+3. Backend APIs
+4. Frontend UI
+5. Integrations
+6. Testing
+
+Explain each step clearly and generate working code.
